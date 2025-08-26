@@ -20,10 +20,10 @@ DB_CONFIG = {
 # Create a small pool at import-time so serverless can reuse warm instances
 cnxpool = None
 try:
-cnxpool = pooling.MySQLConnectionPool(pool_name="kpi_pool", pool_size=3, **DB_CONFIG)
+    cnxpool = pooling.MySQLConnectionPool(pool_name="kpi_pool", pool_size=3, **DB_CONFIG)
 except Exception as e:
-# Pool creation can fail on cold boot without DB access; we'll fall back to per-request connect
-cnxpool = None
+    # Pool creation can fail on cold boot without DB access; we'll fall back to per-request connect
+    cnxpool = None
 
 
 app = Flask(__name__)
@@ -32,66 +32,52 @@ app = Flask(__name__)
 KPI_COLS = [f"kpi_{i}" for i in range(1, 10)]
 
 
-@app.get("/health")
-def health():
-return {"ok": True}, 200
-
-
 @app.get("/kpi")
 def get_kpi():
-driver_id = request.args.get("driver_id", type=str)
-year = request.args.get("year", type=int)
+    driver_id = request.args.get("driver_id", type=str)
+    year      = request.args.get("year", type=int)
 
+    if not driver_id or not year:
+        return jsonify({
+            "error": "Missing required query params: driver_id, year"
+        }), 400
 
-if not driver_id or not year:
-return jsonify({"error": "Missing required query params: driver_id, year"}), 400
+    sql = f"""
+        SELECT month, {', '.join(KPI_COLS)}
+        FROM driverkpi
+        WHERE driver_id = %s AND year = %s
+        ORDER BY month
+    """
 
+    try:
+        conn = cnxpool.get_connection()
+        cur = conn.cursor()
+        cur.execute(sql, (driver_id, year))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+    except mysql.connector.Error as e:
+        return jsonify({"error": f"MySQL error: {e}"}), 500
 
-sql = f"""
-SELECT month, {', '.join(KPI_COLS)}
-FROM driverkpi
-WHERE driver_id = %s AND year = %s
-ORDER BY month
-"""
+    if not rows:
+        return jsonify({
+            "driver": driver_id,
+            "data": {},
+            "message": "No KPI rows found for given driver_id/year"
+        }), 404
 
+    # Build: { "11": [k1..k9], "12": [...], "1": [...] }
+    data = {}
+    for row in rows:
+        month = str(row[0])
+        kpis  = [int(x) if x is not None else 0 for x in row[1:1+len(KPI_COLS)]]
+        data[month] = kpis
 
-try:
-if cnxpool is not None:
-conn = cnxpool.get_connection()
-else:
-conn = mysql.connector.connect(**DB_CONFIG)
-cur = conn.cursor()
-cur.execute(sql, (driver_id, year))
-rows = cur.fetchall()
-except mysql.connector.Error as e:
-return jsonify({"error": f"MySQL error: {e}"}), 500
-finally:
-try:
-cur.close()
-conn.close()
-except Exception:
-pass
-
-
-if not rows:
-return jsonify({
-"driver": driver_id,
-"data": {},
-"message": "No KPI rows found for given driver_id/year"
-}), 404
-
-
-# Build: { "11": [k1..k9], "12": [...], "1": [...] }
-data = {}
-for row in rows:
-month = str(row[0])
-kpis = [int(x) if x is not None else 0 for x in row[1:1 + len(KPI_COLS)]]
-data[month] = kpis
-
-
-return jsonify({"driver": driver_id, "data": data}), 200
-
+    return jsonify({
+        "driver": driver_id,
+        "data": data
+    }), 200
 
 if __name__ == "__main__":
-# Local dev
-app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8000)), debug=True)
+    # For local dev: python app.py
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8000)), debug=True)
