@@ -1,0 +1,16 @@
+*   [33ma8f479e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m init kpidriver
+[31m|[m[32m\[m  
+[31m|[m * [33m7f0ee01[m[33m ([m[1;31morigin/main[m[33m)[m init: driverkpi Flask API (Vercel)
+* [33m1e74a03[m init kpidriver
+* [33m49cbe0b[m init kpidriver
+* [33m8e5419f[m Delete .env.example
+* [33md069884[m chore: remove vercel.json (use Vercel defaults)
+* [33m95bcf25[m chore: trigger Vercel redeploy
+* [33m23cc816[m chore: trigger Vercel redeploy
+* [33m0ff9781[m chore: trigger Vercel redeploy
+*   [33me31a8df[m merge: integrate remote initial commit
+[33m|[m[34m\[m  
+[33m|[m * [33mf10c380[m init: driverkpi (Flask KPI API)
+[33m|[m * [33m33015b2[m init: driverkpi (Flask KPI API)
+[33m|[m * [33mad1f3e8[m init
+* [33mc5bfce8[m init: driverkpi Flask API (Vercel)
