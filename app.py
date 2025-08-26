@@ -32,7 +32,7 @@ app = Flask(__name__)
 KPI_COLS = [f"kpi_{i}" for i in range(1, 10)]
 
 
-@app.get("/kpi")
+@app.get("/kpi/api")
 def get_kpi():
     driver_id = request.args.get("driver_id", type=str)
     year      = request.args.get("year", type=int)
